@@ -297,5 +297,72 @@ train_final3<-train_final3[1:49674,] %>%
 
 write.csv(train_final3, file = "train_final.csv")
 
+###############
+
+train_0702 <- read.csv("C:/Users/wls40/OneDrive/바탕 화면/train_final_0702.csv")
+train_0702 %>% 
+    head()
+
+pop <- read.csv("C:/Users/wls40/OneDrive/바탕 화면/population2012_2016.csv")
+pop %>% 
+    head()
+pop2 <- pop %>% 
+    pivot_longer(cols = -`행정구역별.1.`) %>% 
+    filter(`행정구역별.1.` != "행정구역별(1)", `행정구역별.1.` != "전국")
+
+pop2$name <- gsub("X", "", pop2$name)
+pop2 %>% 
+    head()
+pop2$name <-gsub("\\.","",pop2$name, perl=TRUE)
+  
+
+str_replace(pop2$name, ".","") %>% 
+    head()
 
 
+pop3 <- pop2 %>% 
+    mutate(tma = str_sub(name, 1,6),
+           value = as.numeric(as.character(value))) %>% 
+    rename(stn_id = `행정구역별.1.`)
+pop3 %>% 
+    head()
+str_length(pop3$name)
+pop3$name <- str_replace(pop3$name, str_sub(pop3$name, 1,6),"a")
+pop4 <- pop3 %>% 
+    mutate(name = ifelse(name == "a", "elder_rate", 
+                         ifelse(name == "a1", "elder", "total_pop")))
+
+pop4 <- pop4 %>% 
+    pivot_wider(values_from = value) 
+switch(pop4$stn_id,
+       "서울특별시"="서울",
+       "부산광역시"="부산",
+       "대구광역시"="대구",
+       "인천광역시"="인천",
+       "광주광역시"="광주",
+       "대전광역시"="대전")
+
+pop4$stn_id<-gsub("특별시","", pop4$stn_id)
+pop4$stn_id<-gsub("광역시","", pop4$stn_id)
+pop4$stn_id<-gsub("특별자치시","", pop4$stn_id)
+pop4$stn_id<-gsub("특별자치도","", pop4$stn_id)
+pop4$stn_id<-gsub("청","", pop4$stn_id)
+
+identical(sort(unique(pop4$stn_id)), unique(train_final3$stn_id))
+pop4 <- pop4 %>% 
+    rename(month = tma)
+
+
+train_0702 %>% 
+    str()
+train_0702_2 <- train_0702 %>% 
+    mutate(month = str_sub(tma,1,6))
+
+train_0702_2<-train_0702_2 %>% 
+    left_join(pop4, by = c("month","stn_id"))
+train_0702_2 %>% 
+    filter(stn_id=="강원") %>% 
+    select(tma, elder_rate, elder) %>% 
+    head()
+
+write.csv(train_0702_2, file = "train_final_20220702.csv")
